@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 16px;
+    box-sizing: border-box;
+  }
+  .row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .card {
+    position: relative;
+    width: 180px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    text-align: center;
+    color: #1c1c1e;
+    background: linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,255,255,0.35));
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.10),
+      inset 0 1px 1px rgba(255,255,255,0.9),
+      inset 0 -8px 20px rgba(255,255,255,0.1);
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: -40%; left: -20%;
+    width: 140%; height: 80%;
+    background: radial-gradient(ellipse at top, rgba(255,255,255,0.7), transparent 70%);
+    pointer-events: none;
+  }
+  .card-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .flag { font-size: 22px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); flex-shrink: 0; }
+  .code {
+    font-size: 11px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .amount {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    text-align: right;
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #1c1c1e;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+  }
+  .amount::-webkit-outer-spin-button,
+  .amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .amount[readonly] { opacity: 0.75; }
+
+  .swap {
+    font-size: 18px;
+    opacity: 0.5;
+    padding: 6px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .swap:hover { opacity: 0.9; }
+  .swap:active { transform: scale(0.88); }
+
+  .rate {
+    font-size: 11px;
+    color: #1c1c1e;
+    opacity: 0.5;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="row">
+    <div class="card">
+      <div class="card-inner">
+        <div class="flag" id="left-flag">🇪🇺</div>
+        <div class="code" id="left-code">EUR</div>
+        <input class="amount" id="left-amount" type="number" value="1" inputmode="decimal">
+      </div>
+    </div>
+
+    <button class="swap" id="swap-btn" aria-label="Währungen tauschen">⇄</button>
+
+    <div class="card">
+      <div class="card-inner">
+        <div class="flag" id="right-flag">🇮🇳</div>
+        <div class="code" id="right-code">INR</div>
+        <input class="amount" id="right-amount" type="number" value="0" inputmode="decimal" readonly tabindex="-1">
+      </div>
+    </div>
+  </div>
+
+  <div class="rate" id="rate-info">Kurs wird geladen…</div>
+</div>
+
+<script>
+  const CURRENCIES = {
+    EUR: { flag: '🇪🇺', code: 'EUR' },
+    INR: { flag: '🇮🇳', code: 'INR' }
+  };
+
+  let rateEurToInr = null; // 1 EUR = rateEurToInr INR
+  let state = { left: 'EUR', right: 'INR' };
+
+  const ENDPOINTS = [
+    'https://api.frankfurter.dev/v1/latest?from=EUR&to=INR',
+    'https://open.er-api.com/v6/latest/EUR'
+  ];
+
+  async function loadRate() {
+    for (const url of ENDPOINTS) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const r = data.rates.INR;
+        if (!r) throw new Error('no rate');
+        rateEurToInr = r;
+        const date = data.date || data.time_last_update_utc || '';
+        document.getElementById('rate-info').textContent =
+          `1 EUR = ${r.toFixed(2)} INR · Stand: ${date}`;
+        recalculate();
+        return;
+      } catch (e) {
+        continue;
+      }
+    }
+    document.getElementById('rate-info').textContent = 'Kurs konnte nicht geladen werden (keine Internetverbindung?)';
+  }
+
+  function convert(amount, from, to) {
+    if (from === to) return amount;
+    if (rateEurToInr === null) return 0;
+    if (from === 'EUR') return amount * rateEurToInr;
+    return amount / rateEurToInr;
+  }
+
+  function renderLabels() {
+    document.getElementById('left-flag').textContent = CURRENCIES[state.left].flag;
+    document.getElementById('left-code').textContent = CURRENCIES[state.left].code;
+    document.getElementById('right-flag').textContent = CURRENCIES[state.right].flag;
+    document.getElementById('right-code').textContent = CURRENCIES[state.right].code;
+  }
+
+  function recalculate() {
+    const leftVal = parseFloat(document.getElementById('left-amount').value) || 0;
+    const rightVal = convert(leftVal, state.left, state.right);
+    document.getElementById('right-amount').value = rightVal.toFixed(2);
+  }
+
+  document.getElementById('left-amount').addEventListener('input', recalculate);
+
+  document.getElementById('swap-btn').addEventListener('click', () => {
+    const tmp = state.left;
+    state.left = state.right;
+    state.right = tmp;
+    renderLabels();
+    recalculate();
+  });
+
+  renderLabels();
+  loadRate();
+  setInterval(loadRate, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>
