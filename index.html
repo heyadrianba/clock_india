@@ -2,32 +2,23 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Liquid Glass Uhren</title>
 <style>
   html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
+    margin: 0; padding: 0; height: 100%;
     background: transparent;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-
   .wrap {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
     justify-content: center;
-    align-items: center;
     padding: 24px 16px;
     box-sizing: border-box;
   }
 
-  .clock {
+  .widget {
     position: relative;
-    width: 200px;
-    padding: 20px 16px;
-    border-radius: 24px;
-    text-align: center;
+    width: 340px;
+    border-radius: 26px;
     color: #1c1c1e;
     background: linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,255,255,0.35));
     backdrop-filter: blur(18px) saturate(180%);
@@ -39,85 +30,239 @@
       inset 0 -8px 20px rgba(255,255,255,0.1);
     overflow: hidden;
   }
-
-  .clock::before {
+  .widget::before {
     content: "";
     position: absolute;
-    top: -40%;
-    left: -20%;
-    width: 140%;
-    height: 80%;
+    top: -40%; left: -20%;
+    width: 140%; height: 60%;
     background: radial-gradient(ellipse at top, rgba(255,255,255,0.7), transparent 70%);
     pointer-events: none;
   }
 
-  .flag {
-    font-size: 28px;
-    margin-bottom: 6px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+  .grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .label {
-    font-size: 13px;
-    letter-spacing: 1.5px;
+  .cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 22px 14px;
+    text-align: center;
+  }
+  .cell.row2 { padding-top: 18px; }
+
+  .cell-label {
+    font-size: 11px;
+    letter-spacing: 1.3px;
     text-transform: uppercase;
     opacity: 0.6;
-    margin-bottom: 10px;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   }
+  .cell-label .flag { font-size: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
 
-  .time {
-    font-size: 38px;
+  .cell-value {
+    font-size: 28px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
   }
 
-  .date {
-    margin-top: 8px;
-    font-size: 12px;
-    opacity: 0.55;
+  .amount {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #1c1c1e;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+  }
+  .amount::-webkit-outer-spin-button,
+  .amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .amount[readonly] { opacity: 0.75; }
+
+  .cell-sub {
+    font-size: 11px;
+    opacity: 0.5;
+    min-height: 14px;
+  }
+
+  /* Naht zwischen den beiden Spalten */
+  .divider {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+    width: 1px;
+    background: linear-gradient(rgba(28,28,30,0), rgba(28,28,30,0.14), rgba(28,28,30,0));
+  }
+  /* Naht zwischen den beiden Zeilen */
+  .divider-h {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(28,28,30,0), rgba(28,28,30,0.14), rgba(28,28,30,0));
+  }
+
+  .swap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    opacity: 0.75;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .swap:hover { opacity: 1; }
+  .swap:active { transform: translate(-50%, -50%) scale(0.88); }
+
+  .footer {
+    position: relative;
+    padding: 8px 16px 14px;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.5;
+    border-top: 1px solid rgba(28,28,30,0.08);
+    margin-top: 2px;
   }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <div class="clock">
-    <div class="flag">🇩🇪</div>
-    <div class="label">Deutschland</div>
-    <div class="time" id="de-time">--:--:--</div>
-    <div class="date" id="de-date">–</div>
-  </div>
+  <div class="widget">
+    <div class="grid">
+      <div class="cell row1">
+        <div class="cell-label"><span class="flag">🇩🇪</span>Deutschland</div>
+        <div class="cell-value" id="de-time">--:--</div>
+        <div class="cell-sub" id="de-date">–</div>
+      </div>
+      <div class="cell row1">
+        <div class="cell-label"><span class="flag" id="left-flag">🇪🇺</span><span id="left-code">EUR</span></div>
+        <input class="amount" id="left-amount" type="number" value="1" inputmode="decimal">
+        <div class="cell-sub"></div>
+      </div>
 
-  <div class="clock">
-    <div class="flag">🇮🇳</div>
-    <div class="label">Indien</div>
-    <div class="time" id="in-time">--:--:--</div>
-    <div class="date" id="in-date">–</div>
+      <div class="cell row2">
+        <div class="cell-label"><span class="flag">🇮🇳</span>Indien</div>
+        <div class="cell-value" id="in-time">--:--</div>
+        <div class="cell-sub" id="in-date">–</div>
+      </div>
+      <div class="cell row2">
+        <div class="cell-label"><span class="flag" id="right-flag">🇮🇳</span><span id="right-code">INR</span></div>
+        <input class="amount" id="right-amount" type="number" value="0" inputmode="decimal" readonly tabindex="-1">
+        <div class="cell-sub"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="divider-h"></div>
+      <button class="swap" id="swap-btn" aria-label="Währungen tauschen">⇅</button>
+    </div>
+
+    <div class="footer" id="rate-info">Kurs wird geladen…</div>
   </div>
 </div>
 
 <script>
-  function update() {
+  // Uhren
+  function updateClocks() {
     const now = new Date();
+    document.getElementById('de-time').textContent = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+    document.getElementById('de-date').textContent = now.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit' });
+    document.getElementById('in-time').textContent = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
+    document.getElementById('in-date').textContent = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: '2-digit', month: '2-digit' });
+  }
+  updateClocks();
+  setInterval(updateClocks, 1000);
 
-    const deTime = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
-    const deDate = now.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit' });
+  // Currency
+  const CURRENCIES = {
+    EUR: { flag: '🇪🇺', code: 'EUR' },
+    INR: { flag: '🇮🇳', code: 'INR' }
+  };
+  let rateEurToInr = null;
+  let state = { left: 'EUR', right: 'INR' };
 
-    const inTime = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
-    const inDate = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: '2-digit', month: '2-digit' });
+  const ENDPOINTS = [
+    'https://api.frankfurter.dev/v1/latest?from=EUR&to=INR',
+    'https://open.er-api.com/v6/latest/EUR'
+  ];
 
-    document.getElementById('de-time').textContent = deTime;
-    document.getElementById('de-date').textContent = deDate;
-    document.getElementById('in-time').textContent = inTime;
-    document.getElementById('in-date').textContent = inDate;
+  async function loadRate() {
+    for (const url of ENDPOINTS) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const r = data.rates.INR;
+        if (!r) throw new Error('no rate');
+        rateEurToInr = r;
+        const date = data.date || data.time_last_update_utc || '';
+        document.getElementById('rate-info').textContent = `1 EUR = ${r.toFixed(2)} INR · Stand: ${date}`;
+        recalculate();
+        return;
+      } catch (e) {
+        continue;
+      }
+    }
+    document.getElementById('rate-info').textContent = 'Kurs konnte nicht geladen werden';
   }
 
-  update();
-  setInterval(update, 1000);
+  function convert(amount, from, to) {
+    if (from === to) return amount;
+    if (rateEurToInr === null) return 0;
+    if (from === 'EUR') return amount * rateEurToInr;
+    return amount / rateEurToInr;
+  }
+
+  function renderLabels() {
+    document.getElementById('left-flag').textContent = CURRENCIES[state.left].flag;
+    document.getElementById('left-code').textContent = CURRENCIES[state.left].code;
+    document.getElementById('right-flag').textContent = CURRENCIES[state.right].flag;
+    document.getElementById('right-code').textContent = CURRENCIES[state.right].code;
+  }
+
+  function recalculate() {
+    const leftVal = parseFloat(document.getElementById('left-amount').value) || 0;
+    document.getElementById('right-amount').value = convert(leftVal, state.left, state.right).toFixed(2);
+  }
+
+  document.getElementById('left-amount').addEventListener('input', recalculate);
+  document.getElementById('swap-btn').addEventListener('click', () => {
+    const tmp = state.left;
+    state.left = state.right;
+    state.right = tmp;
+    renderLabels();
+    recalculate();
+  });
+
+  renderLabels();
+  loadRate();
+  setInterval(loadRate, 5 * 60 * 1000);
 </script>
 
 </body>
